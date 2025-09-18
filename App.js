@@ -1,223 +1,268 @@
-import React from "react";
-import {
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-} from "react-native";
+import React, { useState, useEffect } from 'react';
 
-// --- Constantes de Logo e Dados ---
-const CORINTHIANS_LOGO = "https://cdn.ssref.net/req/202407181/tlogo/fb/2049.png";
-
-const proximoJogo = {
-  timeCasa: {
-    nome: "Corinthians",
-    logo: CORINTHIANS_LOGO,
-  },
-  timeVisitante: {
-    nome: "Palmeiras",
-    logo: "https://cdn.ssref.net/req/202407181/tlogo/fb/2056.png",
-  },
-  detalhes: "Brasileirão | Neo Química Arena",
-};
-
-const elenco = [
-  {
-    id: "1",
-    nome: "Cássio",
-    posicao: "Goleiro",
-    foto: "https://s.sde.globo.com/media/person_role/2023/03/02/cassio_1_Copia_2.png",
-  },
-  {
-    id: "2",
-    nome: "Fagner",
-    posicao: "Lateral Direito",
-    foto: "https://s.sde.globo.com/media/person_role/2023/03/02/fagner_1_Copia_2.png",
-  },
-  {
-    id: "3",
-    nome: "Yuri Alberto",
-    posicao: "Atacante",
-    foto: "https://s.sde.globo.com/media/person_role/2023/08/29/yuri_alberto_corinthians_foto_marcos_ribolli_2023_1_1.png",
-  },
-   {
-    id: "4",
-    nome: "Rodrigo Garro",
-    posicao: "Meio-Campo",
-    foto: "https://s.sde.globo.com/media/person_role/2024/02/09/rodrigo-garro-corinthians-2024-foto-rodrigo-coca-ag-corinthians_1.png",
-  },
-];
-
-const destaques = [
-  {
-    foto: "https://s.sde.globo.com/media/person_role/2023/08/29/yuri_alberto_corinthians_foto_marcos_ribolli_2023_1_1.png",
-    nome: "Yuri Alberto",
-    descricao: "Artilheiro do time na temporada.",
-  },
-  {
-    foto: "https://s.sde.globo.com/media/person_role/2023/03/02/cassio_1_Copia_2.png",
-    nome: "Cássio",
-    descricao: "O Gigante da Fiel, ídolo histórico.",
-  },
-];
-
-// --- Componente Principal ---
+// --- Componente Principal: Jogo de Adivinhação ---
 export default function App() {
+  const [secretNumber, setSecretNumber] = useState(0);
+  const [guess, setGuess] = useState('');
+  const [message, setMessage] = useState('Escolha um nível de dificuldade para começar.');
+  const [attempts, setAttempts] = useState(0);
+  const [gameOver, setGameOver] = useState(true);
+  const [previousGuesses, setPreviousGuesses] = useState([]);
+  const [maxNumber, setMaxNumber] = useState(100);
+  const [difficulty, setDifficulty] = useState(null);
+
+  // Função para definir a dificuldade e iniciar o jogo
+  const selectDifficulty = (level, num) => {
+    setDifficulty(level);
+    setMaxNumber(num);
+    setGameOver(false); // Marca o início do jogo
+  };
+
+  // Inicia uma nova rodada mantendo a dificuldade
+  const startGame = (num) => {
+    const newSecretNumber = Math.floor(Math.random() * num) + 1;
+    setSecretNumber(newSecretNumber);
+    setGuess('');
+    setMessage(`Estou a pensar num número entre 1 e ${num}.`);
+    setAttempts(0);
+    setGameOver(false);
+    setPreviousGuesses([]);
+  };
+
+  // Efeito para iniciar o jogo assim que a dificuldade é escolhida
+  useEffect(() => {
+    if (difficulty) {
+      startGame(maxNumber);
+    }
+  }, [difficulty, maxNumber]);
+
+  const handleInputChange = (event) => {
+    setGuess(event.target.value);
+  };
+
+  const handleGuess = () => {
+    if (gameOver) return;
+
+    const userGuess = parseInt(guess, 10);
+
+    if (isNaN(userGuess) || userGuess < 1 || userGuess > maxNumber) {
+      setMessage(`Por favor, insira um número válido entre 1 e ${maxNumber}.`);
+      return;
+    }
+
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    setPreviousGuesses([...previousGuesses, userGuess]);
+
+    if (userGuess === secretNumber) {
+      setMessage(`Parabéns! Acertou o número ${secretNumber} em ${newAttempts} tentativas!`);
+      setGameOver(true);
+    } else if (userGuess < secretNumber) {
+      setMessage('Muito baixo! Tente um número mais alto.');
+    } else {
+      setMessage('Muito alto! Tente um número mais baixo.');
+    }
+    setGuess('');
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleGuess();
+    }
+  };
+
+  // Função para voltar à tela de seleção de dificuldade
+  const resetGame = () => {
+    setDifficulty(null);
+    setMessage('Escolha um nível de dificuldade para começar.');
+    setGameOver(true);
+  };
+
+  // Calcula a "temperatura" do palpite para mudar o fundo
+  const getHintColor = () => {
+    if (gameOver || attempts === 0) return styles.container.background;
+    const lastGuess = previousGuesses[previousGuesses.length - 1];
+    const diff = Math.abs(lastGuess - secretNumber);
+    const closeness = 1 - (diff / maxNumber);
+
+    if (diff <= 5) return 'linear-gradient(45deg, #ff416c, #ff4b2b)'; // Muito Quente
+    if (diff <= 10) return 'linear-gradient(45deg, #ff8c00, #ffaf60)'; // Quente
+    if (diff <= 25) return 'linear-gradient(45deg, #00c6ff, #0072ff)'; // Frio
+    return 'linear-gradient(45deg, #1d2b64, #4e54c8)'; // Muito Frio
+  };
+
+  // Tela de Seleção de Dificuldade
+  if (!difficulty) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.gameCard}>
+          <h1 style={styles.title}>Jogo de Adivinhação</h1>
+          <p style={styles.message}>{message}</p>
+          <div style={styles.difficultyContainer}>
+            <button onClick={() => selectDifficulty('Fácil', 50)} style={{...styles.button, ...styles.difficultyButton}}>Fácil (1-50)</button>
+            <button onClick={() => selectDifficulty('Médio', 100)} style={{...styles.button, ...styles.difficultyButton}}>Médio (1-100)</button>
+            <button onClick={() => selectDifficulty('Difícil', 200)} style={{...styles.button, ...styles.difficultyButton}}>Difícil (1-200)</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Tela Principal do Jogo
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {/* Cabeçalho com Logo */}
-          <View style={styles.headerContainer}>
-             <Image source={{ uri: CORINTHIANS_LOGO }} style={styles.headerLogo} />
-             <Text style={styles.header}>Central do Timão</Text>
-          </View>
+    <div style={{...styles.container, background: getHintColor()}}>
+      <div style={styles.gameCard}>
+        <h1 style={styles.title}>Adivinhe o Número</h1>
+        <p style={styles.message}>{message}</p>
 
-          {/* Card de Próximo Jogo */}
-          <Text style={styles.sectionTitle}>Próximo Jogo</Text>
-          <View style={styles.featuredGameCard}>
-            {/* ... (código do card de jogo inalterado) ... */}
-          </View>
+        {!gameOver ? (
+          <div style={styles.inputContainer}>
+            <input
+              type="number"
+              value={guess}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              style={styles.input}
+              placeholder="Seu palpite"
+              autoFocus
+            />
+            <button onClick={handleGuess} style={styles.button}>Adivinhar</button>
+          </div>
+        ) : (
+          <div style={styles.gameOverContainer}>
+            <button onClick={() => startGame(maxNumber)} style={{...styles.button, ...styles.playAgainButton}}>Jogar Novamente</button>
+            <button onClick={resetGame} style={{...styles.button, ...styles.changeDifficultyButton}}>Mudar Dificuldade</button>
+          </div>
+        )}
 
-          {/* Elenco Principal com Foto e Logo */}
-          <Text style={styles.sectionTitle}>Elenco Principal</Text>
-          {elenco.map((jogador) => (
-            <TouchableOpacity key={jogador.id} style={styles.playerItem}>
-              <Image source={{ uri: jogador.foto }} style={styles.playerPhoto} />
-              <View style={styles.playerInfoContainer}>
-                 <Text style={styles.playerName}>{jogador.nome}</Text>
-                 <Text style={styles.playerPosition}>{jogador.posicao}</Text>
-              </View>
-              <Image source={{ uri: CORINTHIANS_LOGO }} style={styles.playerItemLogo} />
-            </TouchableOpacity>
-          ))}
-
-          {/* Craques do Time com Foto */}
-          <Text style={styles.sectionTitle}>Craques do Time</Text>
-          {destaques.map((jogador, index) => (
-            <View key={index} style={styles.performerCard}>
-              <Image source={{ uri: jogador.foto }} style={styles.performerImage} />
-              <View style={styles.performerInfo}>
-                <Text style={styles.performerName}>{jogador.nome}</Text>
-                <Text style={styles.performerDesc}>{jogador.descricao}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <div style={styles.statsContainer}>
+          <p style={styles.attempts}>Tentativas: {attempts}</p>
+          <div style={styles.historyContainer}>
+            <h3 style={styles.historyTitle}>Histórico:</h3>
+            <div style={styles.guessesList}>
+              {previousGuesses.map((pGuess, index) => (
+                <span key={index} style={styles.guessBubble}>{pGuess}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 // --- Estilos ---
-const styles = StyleSheet.create({
+const styles = {
   container: {
-    flex: 1,
-    backgroundColor: "#000000",
-  },
-  content: {
-    padding: 20,
-  },
-  headerContainer: {
-    flexDirection: 'row',
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    minHeight: '100vh',
+    width: '100vw', // Garante que o container ocupe toda a largura da tela
+    background: 'linear-gradient(45deg, #1d2b64, #f8cdda)',
+    fontFamily: "'Poppins', sans-serif",
+    transition: 'background 0.5s ease',
   },
-  headerLogo: {
-    width: 40,
-    height: 40,
-    marginRight: 10,
-  },
-  header: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginTop: 25,
-    marginBottom: 15,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FFFFFF',
-    paddingLeft: 10,
-  },
-  featuredGameCard: {
-    backgroundColor: "#1C1C1C",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-  },
-  // ... (outros estilos do card de jogo inalterados) ...
-  
-  // Elenco
-  playerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1C1C1C",
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  playerPhoto: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  playerInfoContainer: {
-    flex: 1, // Faz o container de texto ocupar o espaço disponível
-    marginLeft: 15,
-  },
-  playerName: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  playerPosition: {
-    color: "#A0A0A0",
-    fontSize: 14,
-  },
-  playerItemLogo: {
-    width: 30,
-    height: 30,
-    marginLeft: 10, // margem para não ficar colado
-  },
-
-  // Destaques
-  performerCard: {
-    backgroundColor: '#1C1C1C',
-    borderRadius: 12,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  performerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  performerInfo: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  performerName: {
+  gameCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: '30px 40px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+    backdropFilter: 'blur(12px)',
+    textAlign: 'center',
+    width: '90%',
+    maxWidth: '450px',
     color: '#FFFFFF',
-    fontSize: 18,
+  },
+  title: {
+    fontSize: '2.2rem',
+    marginBottom: '15px',
+    textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+  },
+  message: {
+    fontSize: '1.1rem',
+    minHeight: '40px',
+    margin: '0 0 25px 0',
+    fontWeight: '500',
+  },
+  inputContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    marginBottom: '20px',
+  },
+  input: {
+    padding: '12px',
+    fontSize: '1rem',
+    borderRadius: '10px',
+    border: '1px solid #ddd',
+    textAlign: 'center',
+    width: '120px',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    color: '#333',
+  },
+  button: {
+    padding: '12px 25px',
+    fontSize: '1rem',
+    color: '#FFFFFF',
+    backgroundColor: '#007BFF',
+    border: 'none',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
     fontWeight: 'bold',
   },
-  performerDesc: {
-    color: '#A0A0A0',
-    fontSize: 14,
-    marginTop: 4,
+  difficultyContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px',
+    marginTop: '20px',
   },
-});
+  difficultyButton: {
+    backgroundColor: 'rgba(0, 123, 255, 0.7)',
+  },
+  gameOverContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    marginBottom: '20px',
+  },
+  playAgainButton: {
+    backgroundColor: '#28A745',
+  },
+  changeDifficultyButton: {
+    backgroundColor: '#6c757d'
+  },
+  statsContainer: {
+    marginTop: '20px',
+    paddingTop: '15px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+  },
+  attempts: {
+    fontSize: '1rem',
+  },
+  historyContainer: {
+    marginTop: '10px',
+  },
+  historyTitle: {
+    margin: '0 0 10px 0',
+    fontSize: '1rem',
+    fontWeight: '500',
+    color: '#E0E0E0',
+  },
+  guessesList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    justifyContent: 'center',
+    maxHeight: '100px',
+    overflowY: 'auto',
+  },
+  guessBubble: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: '5px 10px',
+    borderRadius: '20px',
+  },
+};
+
