@@ -262,7 +262,7 @@ const styles = {
   guessBubble: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     padding: '5px 10px',
-    borderRadius: '20px',
+    borderRadius: '21px',
   },
 };
 
